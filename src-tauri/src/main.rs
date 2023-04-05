@@ -8,8 +8,10 @@ use std::{
     thread::{self, sleep},
     time::Duration,
 };
+use std::process::Command;
 use tauri::{async_runtime::Mutex as AsyncMutex, State};
-
+#[macro_use]
+extern crate shells;
 struct AppState {
     pty_pair: Arc<AsyncMutex<PtyPair>>,
     writer: Arc<AsyncMutex<Box<dyn Write + Send>>>,
@@ -26,18 +28,29 @@ fn exec_cmd(cmd: &str) -> String {
     // let x = std::str::from_utf8(&output.stdout[..]).unwrap();
     // println!("{}", x);
     // x.into()
-    std::process::Command::new("which").arg("-ls").output().unwrap();
-    "".into()
+    let output = if cfg!(target_os = "windows") {
+        std::process::Command::new("cmd").arg("/C").arg(cmd).output().unwrap()
+    }else{
+        std::process::Command::new("sh").arg("-c").arg(cmd).output().unwrap()
+    };
+    let x = std::str::from_utf8(&output.stdout[..]).unwrap();
+    x.into()
 
 
 }
+#[test]
+fn test_exec_cmd(){
+    println!("=====>{}",exec_cmd("echo $SHELL"))
+}
 #[tauri::command]
-async fn async_shell(shell: &str, state: State<'_, AppState>) -> Result<(), ()> {
+async fn async_shell(state: State<'_, AppState>) -> Result<(), ()> {
     #[cfg(target_os = "windows")]
         let cmd = CommandBuilder::new("powershell.exe");
-    // #[cfg(not(target_os = "windows"))]
-    //     let cmd = CommandBuilder::new("zsh");
-    let cmd = CommandBuilder::new(shell);
+    #[cfg(not(target_os = "windows"))]
+        let cmd=match Command::new("zsh").spawn() {
+            Ok(_) => CommandBuilder::new("zsh"),
+            Err(e) => CommandBuilder::new("bash"),
+        };
     let mut child = state.pty_pair.lock().await.slave.spawn_command(cmd).unwrap();
 
     thread::spawn(move || {
