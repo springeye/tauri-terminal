@@ -14,6 +14,38 @@ struct AppState {
     pty_pair: Arc<AsyncMutex<PtyPair>>,
     writer: Arc<AsyncMutex<Box<dyn Write + Send>>>,
 }
+#[tauri::command]
+fn get_os_name(/* state: State<'_, AppState>*/) -> String {
+    std::env::consts::OS.to_string()
+}
+#[tauri::command]
+fn exec_cmd(cmd: &str) -> String {
+    // let mut command = std::process::Command::new(cmd,);
+    // let output = command.output().unwrap();
+    //
+    // let x = std::str::from_utf8(&output.stdout[..]).unwrap();
+    // println!("{}", x);
+    // x.into()
+    std::process::Command::new("which").arg("-ls").output().unwrap();
+    "".into()
+
+
+}
+#[tauri::command]
+async fn async_shell(shell: &str, state: State<'_, AppState>) -> Result<(), ()> {
+    #[cfg(target_os = "windows")]
+        let cmd = CommandBuilder::new("powershell.exe");
+    // #[cfg(not(target_os = "windows"))]
+    //     let cmd = CommandBuilder::new("zsh");
+    let cmd = CommandBuilder::new(shell);
+    let mut child = state.pty_pair.lock().await.slave.spawn_command(cmd).unwrap();
+
+    thread::spawn(move || {
+        child.wait().unwrap();
+    });
+    Ok(())
+
+}
 
 #[tauri::command]
 async fn async_write_to_pty(data: &str, state: State<'_, AppState>) -> Result<(), ()> {
@@ -47,16 +79,7 @@ fn main() {
         })
         .unwrap();
 
-    #[cfg(target_os = "windows")]
-    let cmd = CommandBuilder::new("powershell.exe");
-    #[cfg(not(target_os = "windows"))]
-    let cmd = CommandBuilder::new("bash");
 
-    let mut child = pty_pair.slave.spawn_command(cmd).unwrap();
-
-    thread::spawn(move || {
-        child.wait().unwrap();
-    });
 
     let reader = pty_pair.master.try_clone_reader().unwrap();
     let writer = pty_pair.master.take_writer().unwrap();
@@ -87,6 +110,9 @@ fn main() {
             writer: Arc::new(AsyncMutex::new(writer)),
         })
         .invoke_handler(tauri::generate_handler![
+            get_os_name,
+            exec_cmd,
+            async_shell,
             async_write_to_pty,
             async_resize_pty
         ])

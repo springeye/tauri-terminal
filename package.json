@@ -8,13 +8,14 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "ndev":"tauri dev",
+    "ndev": "tauri dev",
     "nbuild": "tauri build"
   },
   "dependencies": {
     "@tauri-apps/api": "^1.2.0",
     "xterm": "^5.1.0",
-    "xterm-addon-fit": "^0.7.0"
+    "xterm-addon-fit": "^0.7.0",
+    "xterm-addon-web-links": "^0.8.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.2.3",

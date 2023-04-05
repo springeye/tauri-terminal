@@ -1,41 +1,66 @@
-import { Terminal } from "xterm";
-import { FitAddon } from "xterm-addon-fit";
+import {Terminal} from "xterm";
+import {FitAddon} from "xterm-addon-fit";
+import {WebLinksAddon} from 'xterm-addon-web-links';
 import "xterm/css/xterm.css";
-import { invoke } from "@tauri-apps/api";
-import { Event, listen } from "@tauri-apps/api/event";
+import {invoke} from "@tauri-apps/api";
+import {Event, listen} from "@tauri-apps/api/event";
 
 const terminalElement = document.getElementById("terminal") as HTMLElement;
-
+const fontsfonts = [
+    'Noto Mono for Powerline',
+    'Roboto Mono for Powerline',
+    'Jetbrains Mono',
+    'Menlo',
+    'Monaco',
+    'Consolas',
+    'Liberation Mono',
+    'Courier New',
+    'Noto Sans Mono CJK SC',
+    'Noto Sans Mono CJK TC',
+    'Noto Sans Mono CJK KR',
+    'Noto Sans Mono CJK JP',
+    'Noto Sans Mono CJK HK',
+    'Noto Color Emoji',
+    'Noto Sans Symbols',
+    'monospace',
+    'sans-serif',]
 const fitAddon = new FitAddon();
 const term = new Terminal({
-  // fontFamily: "Jetbrains Mono",
-  theme: {
-    background: "rgb(47, 47, 47)",
-  }
+    fontFamily: fontsfonts.join(","),
+    theme: {
+        background: "rgb(47, 47, 47)",
+    }
 });
+term.loadAddon(new WebLinksAddon());
 term.loadAddon(fitAddon);
 term.open(terminalElement);
 
 // Make the terminal fit all the window size
-function fitTerminal(){
-  fitAddon.fit();
-  void invoke<string>("async_resize_pty", {
-    rows: term.rows,
-    cols: term.cols,
-  });
+async function fitTerminal() {
+    fitAddon.fit();
+    invoke<string>("exec_cmd",{cmd:"ls"}).then(s=>term.writeln(s)).catch(e=>term.writeln("err"+e.toString()))
+    let os=await invoke<string>("get_os_name")
+    term.writeln("os:"+os);
+    await invoke("async_shell", {
+        shell: "zsh",
+    });
+    void invoke<string>("async_resize_pty", {
+        rows: term.rows,
+        cols: term.cols,
+    });
 }
 
 // Write data from pty into the terminal
 function writeToTerminal(ev: Event<string>) {
-  console.log(ev.payload)
-  term.write(ev.payload)
+    console.log(ev.payload)
+    term.write(ev.payload)
 }
 
 // Write data from the terminal to the pty
-function writeToPty(data: string){
-  void invoke("async_write_to_pty", {
-    data,
-  });
+function writeToPty(data: string) {
+    void invoke("async_write_to_pty", {
+        data,
+    });
 }
 
 
