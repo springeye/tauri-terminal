@@ -38,16 +38,20 @@ term.open(terminalElement);
 // Make the terminal fit all the window size
 async function fitTerminal() {
     fitAddon.fit();
-    invoke<string>("exec_cmd",{cmd:"ls"}).then(s=>term.writeln(s)).catch(e=>term.writeln("err"+e.toString()))
     let os=await invoke<string>("get_os_name")
     term.writeln("os:"+os);
-    await invoke("async_shell", {
-        shell: "zsh",
+    void invoke("async_shell", {
+        shell: os=="windows"?"powershell.exe":"zsh",
     });
     void invoke<string>("async_resize_pty", {
         rows: term.rows,
         cols: term.cols,
     });
+    setTimeout(()=>{
+        invoke<string>("async_exec",{cmd:"pwd"})
+            .then(s=>term.writeln(s)).catch(e=>term.writeln("err"+e.toString()))
+    },2000)
+
 }
 
 // Write data from pty into the terminal
