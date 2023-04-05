@@ -1,7 +1,6 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod tests;
 
 use portable_pty::{native_pty_system, CommandBuilder, PtyPair, PtySize};
 use std::{
@@ -127,7 +126,6 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             get_os_name,
-            async_exec,
             async_shell,
             async_write_to_pty,
             async_resize_pty
