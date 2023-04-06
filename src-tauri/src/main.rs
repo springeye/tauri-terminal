@@ -9,7 +9,7 @@ use std::{
     thread::{self, sleep},
     time::Duration,
 };
-use std::process::Command;
+use std::process::{Command, exit};
 use tauri::{async_runtime::Mutex as AsyncMutex, State};
 #[macro_use]
 extern crate shells;
@@ -42,7 +42,8 @@ async fn async_shell(state: State<'_, AppState>) -> Result<(), ()> {
     let mut child = state.pty_pair.lock().await.slave.spawn_command(cmd).unwrap();
 
     thread::spawn(move || {
-        child.wait().unwrap();
+        let status=child.wait().unwrap();
+        exit(status.exit_code() as i32)
     });
     Ok(())
 
