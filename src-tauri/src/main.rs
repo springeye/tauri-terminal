@@ -11,12 +11,15 @@ use std::{
 };
 use std::process::{Command, exit};
 use tauri::{async_runtime::Mutex as AsyncMutex, State};
+
 #[macro_use]
 extern crate shells;
+
 struct AppState {
     pty_pair: Arc<AsyncMutex<PtyPair>>,
     writer: Arc<AsyncMutex<Box<dyn Write + Send>>>,
 }
+
 #[tauri::command]
 fn get_os_name(/* state: State<'_, AppState>*/) -> String {
     std::env::consts::OS.to_string()
@@ -26,27 +29,28 @@ fn get_os_name(/* state: State<'_, AppState>*/) -> String {
 fn exec_cmd(cmd: &str) -> String {
     let output = if cfg!(target_os = "windows") {
         std::process::Command::new("cmd").arg("/C").arg(cmd).output().unwrap()
-    }else{
+    } else {
         std::process::Command::new("sh").arg("-c").arg(cmd).output().unwrap()
     };
     let x = std::str::from_utf8(&output.stdout[..]).unwrap();
     x.into()
 }
+
 #[tauri::command]
 async fn async_shell(state: State<'_, AppState>) -> Result<(), ()> {
     #[cfg(target_os = "windows")]
         let cmd = CommandBuilder::new("powershell.exe");
-    #[cfg(not(target_os = "windows"))]
-        let(_,stdout,_)=sh!("echo $SHELL");
+    #[cfg(not(target_os = "windows"))]{
+        let (_, stdout, _) = sh!("echo $SHELL");
         let cmd = CommandBuilder::new(stdout.trim());
+    }
     let mut child = state.pty_pair.lock().await.slave.spawn_command(cmd).unwrap();
 
     thread::spawn(move || {
-        let status=child.wait().unwrap();
+        let status = child.wait().unwrap();
         exit(status.exit_code() as i32)
     });
     Ok(())
-
 }
 
 #[tauri::command]
@@ -80,7 +84,6 @@ fn main() {
             pixel_height: 0,
         })
         .unwrap();
-
 
 
     let reader = pty_pair.master.try_clone_reader().unwrap();
