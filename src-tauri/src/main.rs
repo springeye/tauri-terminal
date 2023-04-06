@@ -42,7 +42,9 @@ fn exec_cmd(cmd: &str) -> String {
 }
 #[test]
 fn test_exec_cmd(){
-    println!("=====>{}",exec_cmd("echo $SHELL"))
+    let (code,stdout,stderr)=sh!("echo $SHELL");
+    let cur_shell = stdout.as_str();
+    Command::new(cur_shell).arg("-c").arg("echo \"aaa\"").output().expect("run shell error");
 }
 #[tauri::command]
 async fn async_shell(state: State<'_, AppState>) -> Result<(), ()> {
