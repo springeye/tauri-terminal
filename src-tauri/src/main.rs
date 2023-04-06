@@ -24,12 +24,6 @@ fn get_os_name(/* state: State<'_, AppState>*/) -> String {
 
 #[tauri::command]
 fn exec_cmd(cmd: &str) -> String {
-    // let mut command = std::process::Command::new(cmd,);
-    // let output = command.output().unwrap();
-    //
-    // let x = std::str::from_utf8(&output.stdout[..]).unwrap();
-    // println!("{}", x);
-    // x.into()
     let output = if cfg!(target_os = "windows") {
         std::process::Command::new("cmd").arg("/C").arg(cmd).output().unwrap()
     }else{
@@ -37,24 +31,14 @@ fn exec_cmd(cmd: &str) -> String {
     };
     let x = std::str::from_utf8(&output.stdout[..]).unwrap();
     x.into()
-
-
-}
-#[test]
-fn test_exec_cmd(){
-    let (code,stdout,stderr)=sh!("echo $SHELL");
-    let cur_shell = stdout.as_str();
-    Command::new(cur_shell).arg("-c").arg("echo \"aaa\"").output().expect("run shell error");
 }
 #[tauri::command]
 async fn async_shell(state: State<'_, AppState>) -> Result<(), ()> {
     #[cfg(target_os = "windows")]
         let cmd = CommandBuilder::new("powershell.exe");
     #[cfg(not(target_os = "windows"))]
-        let cmd=match Command::new("zsh").spawn() {
-            Ok(_) => CommandBuilder::new("zsh"),
-            Err(e) => CommandBuilder::new("bash"),
-        };
+        let(_,stdout,_)=sh!("echo $SHELL");
+        let cmd = CommandBuilder::new(stdout.trim());
     let mut child = state.pty_pair.lock().await.slave.spawn_command(cmd).unwrap();
 
     thread::spawn(move || {
